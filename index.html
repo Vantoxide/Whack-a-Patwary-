@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WHACK A PATWARY!</title>
+    <style>
+        /* BASE STYLES */
+        body { 
+            background: #1a1a1a; 
+            color: white; 
+            font-family: 'Arial Black', sans-serif; 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            overflow: hidden;
+            touch-action: manipulation; /* Prevents mobile zoom delay */
+        }
+        
+        #header { 
+            background: #8b0000; 
+            width: 100%; 
+            padding: 10px 0; 
+            text-align: center; 
+            border-bottom: 5px solid #ffd700; 
+            z-index: 5;
+        }
+        
+        #frenzy-container { 
+            width: 250px; 
+            height: 12px; 
+            background: #222; 
+            border: 1px solid #ffd700; 
+            margin: 8px auto; 
+            border-radius: 5px; 
+            overflow: hidden; 
+        }
+        #frenzy-bar { 
+            width: 0%; 
+            height: 100%; 
+            background: linear-gradient(90deg, #00ff00, #ffd700, #ff0000); 
+            transition: width 0.2s; 
+        }
+        
+        #main-container { 
+            display: flex; 
+            flex: 1; 
+            padding: 10px; 
+            gap: 20px; 
+            justify-content: center; 
+            align-items: center; 
+        }
+        
+        #abbas-cam { 
+            width: 160px; 
+            height: 240px; 
+            background: #333; 
+            border: 3px solid #ffd700; 
+            border-radius: 10px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding: 5px; 
+        }
+        #abbas-img { 
+            width: 100%; 
+            height: 180px; 
+            border-radius: 5px; 
+            object-fit: cover; 
+            border: 2px solid #555; 
+        }
+        
+        /* PC GRID (4x4) */
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(4, 110px); 
+            grid-template-rows: repeat(4, 110px); 
+            gap: 10px; 
+        }
+        .hole { 
+            width: 110px; 
+            height: 110px; 
+            background: #222; 
+            border: 4px solid #444; 
+            border-radius: 50%; 
+            position: relative; 
+            overflow: hidden; 
+            cursor: crosshair; 
+            box-shadow: inset 0 10px 20px #000;
+        }
+        
+        .patwary { 
+            width: 100%; 
+            height: 100%; 
+            position: absolute; 
+            bottom: -100%; 
+            left: 0; 
+            background-size: cover; 
+            background-position: center; 
+            border-radius: 50%; 
+            transition: bottom 0.1s ease-out; 
+        }
+        .up { bottom: 0; }
+
+        .stat { font-size: 18px; margin: 0 15px; text-transform: uppercase; letter-spacing: 1px; }
+        
+        /* OVERLAYS */
+        .overlay { 
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.95); 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 100; 
+            text-align: center; 
+            padding: 20px;
+        }
+        #end-screen { display: none; }
+        
+        button { 
+            padding: 15px 40px; 
+            font-size: 24px; 
+            background: #ffd700; 
+            border: none; 
+            border-radius: 50px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            margin-top: 20px; 
+            color: black; 
+            box-shadow: 0 5px 0 #b8860b; 
+        }
+        button:active { transform: translateY(3px); box-shadow: 0 2px 0 #b8860b; }
+
+        /* ANIMATIONS */
+        .flash { animation: screenFlash 0.5s; }
+        @keyframes screenFlash {
+            0% { background-color: rgba(255, 215, 0, 0.7); }
+            100% { background-color: transparent; }
+        }
+
+        /* MOBILE RESPONSIVENESS: KEEP 16 GRIDS */
+        @media (max-width: 650px) {
+            #main-container { flex-direction: column; gap: 10px; }
+            #abbas-cam { width: 100px; height: 130px; order: -1; }
+            #abbas-img { height: 90px; }
+            
+            .grid { 
+                grid-template-columns: repeat(4, 21vw); 
+                grid-template-rows: repeat(4, 21vw); 
+                gap: 2vw; 
+            }
+            .hole { width: 21vw; height: 21vw; border-width: 2px; }
+            
+            h1 { font-size: 2rem !important; }
+            .stat { font-size: 14px; margin: 0 5px; }
+            #frenzy-container { width: 180px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="start-screen" class="overlay">
+    <h1 style="color: #ffd700; font-size: 3.5rem; margin: 0; text-shadow: 3px 3px #000;">WHACK A PATWARY!</h1>
+    <button onclick="startGame()">START WHACKING</button>
+</div>
+
+<div id="end-screen" class="overlay">
+    <h1 style="color: #ffd700; font-size: 2.5rem;">ENOUGH WHACKING</h1>
+    <div style="font-size: 5rem; color: #4dff4d; margin: 15px 0;" id="final-score-val">0</div>
+    <p id="verdict" style="font-size: 1.4rem; color: #fff; max-width: 80%; line-height: 1.4;"></p>
+    <button onclick="location.reload()">WHACK AGAIN</button>
+</div>
+
+<div id="header">
+    <span class="stat">PTS: <span id="score-val" style="color:#4dff4d">0</span></span>
+    <span class="stat">TIME: <span id="timer" style="color:#ff4d4d">02:00</span></span>
+    <div id="frenzy-container"><div id="frenzy-bar"></div></div>
+    <div style="font-size: 9px; color: #ffd700; margin-top: 2px; text-transform: uppercase;">Accountability Meter</div>
+</div>
+
+<div id="main-container">
+    <div id="abbas-cam">
+        <img id="abbas-img" src="abbas_normal.jpg">
+        <div style="color:#ffd700; font-size:0.8rem; margin-top:8px;">MIRZA ABBAS</div>
+    </div>
+    <div class="grid" id="game-grid"></div>
+</div>
+
+<audio id="bg-music" src="background_music.mp3" loop></audio>
+<audio id="game-over-snd" src="game_over.mp3"></audio>
+
+<script>
+    const grid = document.getElementById('game-grid');
+    const scoreVal = document.getElementById('score-val');
+    const timerEl = document.getElementById('timer');
+    const abbasImg = document.getElementById('abbas-img');
+    const frenzyBar = document.getElementById('frenzy-bar');
+    
+    let score = 0;
+    let timeLeft = 120;
+    let gameActive = false;
+    let frenzyPoints = 0;
+    const frenzyRequirement = 35; 
+    let isFrenzy = false;
+
+    // Create 16 holes
+    for(let i=0; i<16; i++) {
+        const hole = document.createElement('div');
+        hole.className = 'hole';
+        const p = document.createElement('div');
+        p.className = 'patwary';
+        hole.appendChild(p);
+        
+        // Instant feedback for PC and Mobile
+        hole.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            if (!gameActive || !p.classList.contains('up')) return;
+            
+            const type = p.dataset.type;
+            p.classList.remove('up');
+
+            if (type === 'handshake') {
+                score = Math.max(0, score - 50);
+                frenzyPoints = 0; 
+                abbasImg.src = 'abbas_normal.jpg';
+            } else if (type === 'clock') {
+                timeLeft += 2; // +2 seconds as requested
+                showSmile();
+            } else {
+                score += isFrenzy ? 100 : 10;
+                if(!isFrenzy) frenzyPoints++; 
+                showSmile();
+            }
+
+            updateUI();
+            if (frenzyPoints >= frenzyRequirement && !isFrenzy) triggerFrenzyWave();
+        });
+        grid.appendChild(hole);
+    }
+
+    function showSmile() {
+        abbasImg.src = 'abbas_happy.jpg';
+        setTimeout(() => { if(gameActive && !isFrenzy) abbasImg.src = 'abbas_normal.jpg'; }, 800);
+    }
+
+    function updateUI() {
+        scoreVal.innerText = score;
+        let percentage = (frenzyPoints / frenzyRequirement) * 100;
+        frenzyBar.style.width = Math.min(percentage, 100) + "%";
+    }
+
+    function triggerFrenzyWave() {
+        isFrenzy = true;
+        frenzyPoints = 0;
+        document.body.classList.add('flash'); 
+        
+        const moles = document.querySelectorAll('.patwary');
+        moles.forEach(mole => {
+            mole.style.backgroundImage = "url('patwary.png')";
+            mole.dataset.type = 'mole';
+            mole.classList.add('up');
+        });
+
+        setTimeout(() => {
+            moles.forEach(m => m.classList.remove('up'));
+            document.body.classList.remove('flash');
+            isFrenzy = false;
+            updateUI();
+        }, 1600); 
+    }
+
+    function popSingle() {
+        if (isFrenzy || !gameActive) return;
+        const moles = document.querySelectorAll('.patwary');
+        const mole = moles[Math.floor(Math.random() * 16)];
+        if (mole.classList.contains('up')) return;
+
+        const rand = Math.random();
+        let type = (rand < 0.15) ? 'handshake' : (rand < 0.25) ? 'clock' : 'mole';
+
+        mole.style.backgroundImage = `url('${type === 'mole' ? 'patwary.png' : type + '.png'}')`;
+        mole.dataset.type = type;
+
+        mole.classList.add('up');
+        setTimeout(() => mole.classList.remove('up'), 1000);
+    }
+
+    function gameLoop() {
+        if (!gameActive) return;
+        popSingle();
+        let speed = score > 2000 ? 400 : score > 1000 ? 600 : 800;
+        setTimeout(gameLoop, speed);
+    }
+
+    function startGame() {
+        document.getElementById('start-screen').style.display = 'none';
+        gameActive = true;
+        document.getElementById('bg-music').play().catch(() => {});
+        gameLoop();
+        const timer = setInterval(() => {
+            timeLeft--;
+            let m = Math.floor(timeLeft / 60), s = timeLeft % 60;
+            timerEl.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+            if (timeLeft <= 0) { clearInterval(timer); endGame(); }
+        }, 1000);
+    }
+
+    function endGame() {
+        gameActive = false;
+        document.getElementById('bg-music').pause();
+        document.getElementById('game-over-snd').play().catch(() => {});
+        document.getElementById('final-score-val').innerText = score;
+
+        let v = "";
+        if (score >= 3000) {
+            v = "Excellent! Mirza Abbas can now sleep well.";
+        } else if (score >= 1500) {
+            v = "Great Job! Patwary ragebaiting has decreased.";
+        } else {
+            v = "Patwary's noise was too much.";
+        }
+        
+        document.getElementById('verdict').innerText = v;
+        document.getElementById('end-screen').style.display = 'flex';
+    }
+</script>
+</body>
+</html>
