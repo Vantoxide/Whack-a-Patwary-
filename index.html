@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>WHACK A PATWARY!</title>
     <style>
-        /* BASE STYLES */
         body { 
             background: #1a1a1a; 
             color: white; 
@@ -15,7 +14,7 @@
             flex-direction: column; 
             height: 100vh; 
             overflow: hidden;
-            touch-action: manipulation; /* Prevents mobile zoom delay */
+            touch-action: manipulation; 
         }
         
         #header { 
@@ -71,7 +70,6 @@
             border: 2px solid #555; 
         }
         
-        /* PC GRID (4x4) */
         .grid { 
             display: grid; 
             grid-template-columns: repeat(4, 110px); 
@@ -105,7 +103,6 @@
 
         .stat { font-size: 18px; margin: 0 15px; text-transform: uppercase; letter-spacing: 1px; }
         
-        /* OVERLAYS */
         .overlay { 
             position: fixed; 
             top: 0; left: 0; 
@@ -135,26 +132,22 @@
         }
         button:active { transform: translateY(3px); box-shadow: 0 2px 0 #b8860b; }
 
-        /* ANIMATIONS */
         .flash { animation: screenFlash 0.5s; }
         @keyframes screenFlash {
             0% { background-color: rgba(255, 215, 0, 0.7); }
             100% { background-color: transparent; }
         }
 
-        /* MOBILE RESPONSIVENESS: KEEP 16 GRIDS */
         @media (max-width: 650px) {
             #main-container { flex-direction: column; gap: 10px; }
             #abbas-cam { width: 100px; height: 130px; order: -1; }
             #abbas-img { height: 90px; }
-            
             .grid { 
                 grid-template-columns: repeat(4, 21vw); 
                 grid-template-rows: repeat(4, 21vw); 
                 gap: 2vw; 
             }
             .hole { width: 21vw; height: 21vw; border-width: 2px; }
-            
             h1 { font-size: 2rem !important; }
             .stat { font-size: 14px; margin: 0 5px; }
             #frenzy-container { width: 180px; }
@@ -206,8 +199,12 @@
     let frenzyPoints = 0;
     const frenzyRequirement = 35; 
     let isFrenzy = false;
+    
+    // Global Audio Object for Voices
+    let currentPatwaryVoice = null;
 
-    // Create 16 holes
+    const patwaryVoices = ['p1.mp3', 'p2.mp3', 'p3.mp3', 'p4.mp3', 'p5.mp3'];
+
     for(let i=0; i<16; i++) {
         const hole = document.createElement('div');
         hole.className = 'hole';
@@ -215,7 +212,6 @@
         p.className = 'patwary';
         hole.appendChild(p);
         
-        // Instant feedback for PC and Mobile
         hole.addEventListener('mousedown', (e) => {
             e.preventDefault();
             if (!gameActive || !p.classList.contains('up')) return;
@@ -228,7 +224,7 @@
                 frenzyPoints = 0; 
                 abbasImg.src = 'abbas_normal.jpg';
             } else if (type === 'clock') {
-                timeLeft += 2; // +2 seconds as requested
+                timeLeft += 2;
                 showSmile();
             } else {
                 score += isFrenzy ? 100 : 10;
@@ -240,6 +236,18 @@
             if (frenzyPoints >= frenzyRequirement && !isFrenzy) triggerFrenzyWave();
         });
         grid.appendChild(hole);
+    }
+
+    function playPatwaryVoice() {
+        // Stop current audio if it exists and reset it
+        if (currentPatwaryVoice) {
+            currentPatwaryVoice.pause();
+            currentPatwaryVoice.currentTime = 0;
+        }
+
+        const randomVoice = patwaryVoices[Math.floor(Math.random() * patwaryVoices.length)];
+        currentPatwaryVoice = new Audio(randomVoice);
+        currentPatwaryVoice.play().catch(() => {});
     }
 
     function showSmile() {
@@ -257,6 +265,7 @@
         isFrenzy = true;
         frenzyPoints = 0;
         document.body.classList.add('flash'); 
+        playPatwaryVoice();
         
         const moles = document.querySelectorAll('.patwary');
         moles.forEach(mole => {
@@ -285,6 +294,8 @@
         mole.style.backgroundImage = `url('${type === 'mole' ? 'patwary.png' : type + '.png'}')`;
         mole.dataset.type = type;
 
+        if (type === 'mole') playPatwaryVoice();
+
         mole.classList.add('up');
         setTimeout(() => mole.classList.remove('up'), 1000);
     }
@@ -312,17 +323,14 @@
     function endGame() {
         gameActive = false;
         document.getElementById('bg-music').pause();
+        if (currentPatwaryVoice) currentPatwaryVoice.pause();
         document.getElementById('game-over-snd').play().catch(() => {});
         document.getElementById('final-score-val').innerText = score;
 
         let v = "";
-        if (score >= 3000) {
-            v = "Excellent! Mirza Abbas can now sleep well.";
-        } else if (score >= 1500) {
-            v = "Great Job! Patwary ragebaiting has decreased.";
-        } else {
-            v = "Patwary's noise was too much.";
-        }
+        if (score >= 3000) v = "Excellent! Mirza Abbas can now sleep well.";
+        else if (score >= 1500) v = "Great Job! Patwary ragebaiting has decreased.";
+        else v = "Patwary's noise was too much.";
         
         document.getElementById('verdict').innerText = v;
         document.getElementById('end-screen').style.display = 'flex';
